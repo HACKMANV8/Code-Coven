@@ -13,6 +13,14 @@ const contactSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  // Push notification subscription for emergency alerts
+  pushSubscription: {
+    endpoint: String,
+    keys: {
+      p256dh: String,
+      auth: String,
+    },
+  },
 });
 
 export default mongoose.model("Contact", contactSchema);

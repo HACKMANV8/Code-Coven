@@ -63,10 +63,11 @@ export const EmergencyButton = () => {
       );
 
       // Fetch nearby landmarks
+      let landmark = null;
       let landmarkText = `Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
       try {
         const { GeocodingService } = await import("@/services/geocodingService");
-        const landmark = await GeocodingService.getNearbyLandmarks(
+        landmark = await GeocodingService.getNearbyLandmarks(
           location.latitude,
           location.longitude
         );
@@ -78,10 +79,11 @@ export const EmergencyButton = () => {
         console.warn("Could not fetch landmark for emergency, using coordinates:", error);
       }
 
-      // Send alert to backend
+      // Send alert to backend with location and landmark data
       await sendEmergencyAlert({
         latitude: location.latitude,
-        longitude: location.longitude
+        longitude: location.longitude,
+        landmark: landmark || undefined
       });
 
       // Show success notification with location and landmark

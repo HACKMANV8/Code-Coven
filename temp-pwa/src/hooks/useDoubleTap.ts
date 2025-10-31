@@ -57,10 +57,11 @@ export const useDoubleTap = ({
         console.log("📍 Location:", latitude, longitude);
 
         // Fetch nearby landmarks for emergency alert
+        let landmark = null;
         let landmarkText = `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
         try {
           const { GeocodingService } = await import("@/services/geocodingService");
-          const landmark = await GeocodingService.getNearbyLandmarks(latitude, longitude);
+          landmark = await GeocodingService.getNearbyLandmarks(latitude, longitude);
           if (landmark.fullAddress || landmark.displayName) {
             landmarkText = GeocodingService.formatLandmarkForAlert(landmark);
             console.log("🏛️ Emergency alert landmark:", landmarkText);
@@ -69,8 +70,12 @@ export const useDoubleTap = ({
           console.warn("Could not fetch landmark for emergency, using coordinates:", error);
         }
 
-        // Send emergency alert with location
-        await sendEmergencyAlert({ latitude, longitude });
+        // Send emergency alert with location and landmark data
+        await sendEmergencyAlert({ 
+          latitude, 
+          longitude,
+          landmark: landmark || undefined
+        });
 
         console.log("🚨 Emergency alert sent successfully!");
 

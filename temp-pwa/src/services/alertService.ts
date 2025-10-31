@@ -29,8 +29,52 @@ export const getEmergencyContacts = async (): Promise<EmergencyContact[]> => {
   }
 };
 
-// Function to send SMS alerts to all emergency contacts
-export const sendSmsAlerts = async (location: { latitude: number; longitude: number }) => {
+// Function to send Push Notifications to all emergency contacts (NO CREDENTIALS NEEDED!)
+export const sendPushAlerts = async (location: { 
+  latitude: number; 
+  longitude: number; 
+  landmark?: any;
+}) => {
+  try {
+    // Send push notification to all subscribed contacts
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch("http://localhost:5000/api/push/emergency", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        location: {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          landmark: location.landmark || undefined
+        }
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to send push notifications: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error sending push alerts:", error);
+    throw error;
+  }
+};
+
+// Function to send SMS alerts (fallback, requires Twilio)
+export const sendSmsAlerts = async (location: { 
+  latitude: number; 
+  longitude: number; 
+  landmark?: any;
+}) => {
   try {
     // Get emergency contacts
     const contacts = await getEmergencyContacts();
@@ -42,17 +86,27 @@ export const sendSmsAlerts = async (location: { latitude: number; longitude: num
     // Send SMS to each contact
     const smsPromises = contacts.map(async (contact: EmergencyContact) => {
       try {
+        // Get auth token from localStorage if available
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        
+        // Add auth token if available
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
         const response = await fetch("http://localhost:5000/api/sms/emergency", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({
             phone: contact.phone,
             name: contact.name,
             location: {
               latitude: location.latitude,
-              longitude: location.longitude
+              longitude: location.longitude,
+              landmark: location.landmark || undefined
             }
           }),
         });
@@ -82,8 +136,13 @@ export const sendSmsAlerts = async (location: { latitude: number; longitude: num
   }
 };
 
-// Enhanced alert function that sends both location to backend and SMS alerts
-export const sendEmergencyAlert = async (location: { latitude: number; longitude: number }) => {
+// Enhanced alert function - uses Push Notifications (NO CREDENTIALS NEEDED!)
+// Falls back to SMS if push fails or not available
+export const sendEmergencyAlert = async (location: { 
+  latitude: number; 
+  longitude: number; 
+  landmark?: any;
+}) => {
   try {
     // First, send location to backend
     await alertAPI.sendAlert({
@@ -93,13 +152,33 @@ export const sendEmergencyAlert = async (location: { latitude: number; longitude
       trigger: "emergency_button",
     });
     
-    // Then send SMS alerts to emergency contacts
-    const smsResult = await sendSmsAlerts(location);
+    // Try push notifications first (no credentials needed!)
+    let pushResult = null;
+    try {
+      pushResult = await sendPushAlerts(location);
+      console.log("✅ Push notifications sent:", pushResult);
+    } catch (pushError) {
+      console.warn("Push notifications failed, trying SMS fallback:", pushError);
+      // Fallback to SMS if push fails
+      try {
+        const smsResult = await sendSmsAlerts(location);
+        return {
+          success: true,
+          message: "Emergency alert sent via SMS (push notifications unavailable)",
+          method: "sms",
+          smsResult
+        };
+      } catch (smsError) {
+        console.error("Both push and SMS failed:", smsError);
+        throw new Error("Failed to send emergency alerts");
+      }
+    }
     
     return {
       success: true,
-      message: "Emergency alert sent successfully",
-      smsResult
+      message: "Emergency alert sent successfully via push notifications",
+      method: "push",
+      pushResult
     };
   } catch (error) {
     console.error("Error sending emergency alert:", error);

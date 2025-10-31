@@ -19,33 +19,52 @@ export default function AddContact() {
   const [errors, setErrors] = useState({ name: false, phone: false, relation: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Validate phone number format (E.164: +[country code][number])
+  const validatePhoneNumber = (phone: string): boolean => {
+    // Remove spaces and dashes
+    const cleaned = phone.replace(/[\s-]/g, '');
+    // Check if it starts with + and has at least 10 digits after country code
+    return /^\+[1-9]\d{6,14}$/.test(cleaned);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const phoneCleaned = phone.trim().replace(/[\s-]/g, '');
+    
     const newErrors = {
       name: !name.trim(),
-      phone: !phone.trim(),
+      phone: !phone.trim() || !validatePhoneNumber(phoneCleaned),
       relation: !relation.trim(),
     };
     
     setErrors(newErrors);
     
     if (Object.values(newErrors).some(error => error)) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
+      if (!validatePhoneNumber(phoneCleaned) && phone.trim()) {
+        toast({
+          title: "Invalid Phone Number",
+          description: "Phone number must be in E.164 format (e.g., +1234567890). Include country code starting with +",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Missing Information",
+          description: "Please fill in all fields",
+          variant: "destructive",
+        });
+      }
       return;
     }
     
     setIsSubmitting(true);
     
     try {
-      // Call backend API to save contact
+      // Call backend API to save contact (ensure phone starts with +)
+      const formattedPhone = phoneCleaned.startsWith('+') ? phoneCleaned : `+${phoneCleaned}`;
       await emergencyContactsAPI.add({
         name: name.trim(),
-        phone: phone.trim(),
+        phone: formattedPhone,
         relation: relation.trim(),
       });
       
@@ -119,7 +138,7 @@ export default function AddContact() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+91 98765 43210"
+                  placeholder="+1234567890 (include country code)"
                   value={phone}
                   onChange={(e) => {
                     setPhone(e.target.value);
@@ -129,8 +148,15 @@ export default function AddContact() {
                   disabled={isSubmitting}
                 />
                 {errors.phone && (
-                  <p className="text-sm text-destructive">Phone number is required</p>
+                  <p className="text-sm text-destructive">
+                    {phone.trim() 
+                      ? "Phone number must be in E.164 format (e.g., +1234567890)" 
+                      : "Phone number is required"}
+                  </p>
                 )}
+                <p className="text-xs text-muted-foreground">
+                  Format: +[country code][number]. Example: +14155552671 (US), +447700900000 (UK)
+                </p>
               </div>
 
               <div className="space-y-2">

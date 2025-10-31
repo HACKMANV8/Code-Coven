@@ -57,11 +57,30 @@ self.addEventListener('notificationclick', (event) => {
   
   event.notification.close();
 
-  if (event.action === 'view') {
-    // Open the app to view location
+  const data = event.notification.data || {};
+  
+  if (event.action === 'open-maps' && data.coordinates) {
+    // Open Google Maps with location
+    const mapsUrl = `https://www.google.com/maps?q=${data.coordinates.lat},${data.coordinates.lng}`;
     event.waitUntil(
-      clients.openWindow('/')
+      clients.openWindow(mapsUrl)
     );
+  } else if (event.action === 'view' || !event.action) {
+    // Default: open app or maps if location available
+    if (data.url) {
+      event.waitUntil(
+        clients.openWindow(data.url)
+      );
+    } else if (data.coordinates) {
+      const mapsUrl = `https://www.google.com/maps?q=${data.coordinates.lat},${data.coordinates.lng}`;
+      event.waitUntil(
+        clients.openWindow(mapsUrl)
+      );
+    } else {
+      event.waitUntil(
+        clients.openWindow('/')
+      );
+    }
   }
 });
 

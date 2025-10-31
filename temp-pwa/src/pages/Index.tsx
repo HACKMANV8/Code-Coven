@@ -3,6 +3,7 @@ import { Shield, Users, Clock, CheckCircle, Bluetooth, Zap, Smartphone } from "l
 import { EmergencyButton } from "@/components/EmergencyButton";
 import { MotionEmergencyButton } from "@/components/MotionEmergencyButton";
 import { PermissionsManager } from "@/components/PermissionsManager";
+import { PushSubscriptionManager } from "@/components/PushSubscriptionManager";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { BluetoothManager } from "@/components/BluetoothManager";
 import { Card } from "@/components/ui/card";
@@ -74,6 +75,11 @@ const Index = () => {
           {/* Permissions Section */}
           <div className="animate-fade-in">
             <PermissionsManager />
+          </div>
+
+          {/* Push Notifications Section - NO CREDENTIALS NEEDED! */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            <PushSubscriptionManager />
           </div>
 
           {/* Emergency Button Section */}
