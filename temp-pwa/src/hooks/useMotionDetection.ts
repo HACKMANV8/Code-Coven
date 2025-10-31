@@ -81,29 +81,44 @@ export const useMotionDetection = () => {
 
         const { latitude, longitude } = position.coords;
         
-        // Fetch nearby landmarks for emergency alert
-        let landmark = null;
-        let landmarkText = `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        try {
-          const { GeocodingService } = await import("@/services/geocodingService");
-          landmark = await GeocodingService.getNearbyLandmarks(latitude, longitude);
-          if (landmark.fullAddress || landmark.displayName) {
-            landmarkText = GeocodingService.formatLandmarkForAlert(landmark);
-            console.log("🏛️ Emergency alert landmark:", landmarkText);
-          }
-        } catch (error) {
-          console.warn("Could not fetch landmark for emergency, using coordinates:", error);
+        // Fetch nearby landmarks and heart rate (parallel for speed)
+        const [landmarkResult, heartRateResult] = await Promise.allSettled([
+          (async () => {
+            try {
+              const { GeocodingService } = await import("@/services/geocodingService");
+              return await GeocodingService.getNearbyLandmarks(latitude, longitude);
+            } catch (error) {
+              console.warn("Could not fetch landmark:", error);
+              return null;
+            }
+          })(),
+          (async () => {
+            try {
+              const { HeartRateService } = await import("@/services/heartRateService");
+              return await HeartRateService.getCurrentHeartRate();
+            } catch (error) {
+              console.warn("Could not get heart rate:", error);
+              return null;
+            }
+          })()
+        ]);
+
+        const landmark = landmarkResult.status === 'fulfilled' ? landmarkResult.value : null;
+        const heartRate = heartRateResult.status === 'fulfilled' ? heartRateResult.value : null;
+        
+        // Format landmark text for notification
+        let locationText = `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        if (landmark?.fullAddress || landmark?.displayName) {
+          locationText = (await import("@/services/geocodingService")).GeocodingService.formatLandmarkForAlert(landmark);
         }
         
-        // Send emergency alert with location and landmark data
+        // Send emergency alert with location, landmark, and heart rate data
         await sendEmergencyAlert({ 
           latitude, 
           longitude,
-          landmark: landmark || undefined
+          landmark: landmark || undefined,
+          heartRate: heartRate || undefined
         });
-        
-        // Show success notification with location and landmark
-        const locationText = landmarkText;
         
         // Try to show notification with proper permission handling
         try {

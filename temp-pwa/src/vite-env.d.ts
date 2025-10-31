@@ -1,5 +1,34 @@
 /// <reference types="vite/client" />
 
+// Web Heart Rate API types
+interface SensorOptions {
+  frequency?: number;
+}
+
+interface Sensor extends EventTarget {
+  readonly activated: boolean;
+  readonly hasReading: boolean;
+  readonly timestamp: number | null;
+  start(): void;
+  stop(): void;
+  addEventListener(type: 'reading' | 'error', listener: (ev: Event) => void): void;
+}
+
+interface HeartRateSensor extends Sensor {
+  readonly heartRate: number | null;
+}
+
+interface HeartRateSensorConstructor {
+  new (options?: SensorOptions): HeartRateSensor;
+}
+
+interface Window {
+  HeartRateSensor?: HeartRateSensorConstructor;
+  Sensor?: {
+    new (options?: SensorOptions): Sensor;
+  };
+}
+
 // Web Bluetooth API types
 declare global {
   interface Navigator {

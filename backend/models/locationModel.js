@@ -21,6 +21,13 @@ const locationSchema = new mongoose.Schema({
     postcode: String,
     fullAddress: String,
   },
+  // Heart rate data (if available during emergency)
+  heartRate: {
+    bpm: Number,
+    status: String, // normal, mild_high, high, extreme_high, mild_low, extreme_low
+    source: String, // sensor, camera, bluetooth, estimated
+    timestamp: Date,
+  },
   timestamp: { type: Date, default: Date.now },
 });
 

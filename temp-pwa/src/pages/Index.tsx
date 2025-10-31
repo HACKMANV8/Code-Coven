@@ -4,6 +4,7 @@ import { EmergencyButton } from "@/components/EmergencyButton";
 import { MotionEmergencyButton } from "@/components/MotionEmergencyButton";
 import { PermissionsManager } from "@/components/PermissionsManager";
 import { PushSubscriptionManager } from "@/components/PushSubscriptionManager";
+import { HeartRateMonitor } from "@/components/HeartRateMonitor";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { BluetoothManager } from "@/components/BluetoothManager";
 import { Card } from "@/components/ui/card";
@@ -80,6 +81,11 @@ const Index = () => {
           {/* Push Notifications Section - NO CREDENTIALS NEEDED! */}
           <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
             <PushSubscriptionManager />
+          </div>
+
+          {/* Heart Rate Monitor Section */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            <HeartRateMonitor />
           </div>
 
           {/* Emergency Button Section */}

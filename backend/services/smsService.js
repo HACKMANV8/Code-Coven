@@ -76,9 +76,10 @@ export const sendSMS = async (to, message) => {
 export const sendEmergencyAlert = async (contactPhone, contactName, userName, locationData = null) => {
   // Build location information
   let locationInfo = '';
+  let heartRateInfo = '';
   
   if (locationData) {
-    const { latitude, longitude, landmark } = locationData;
+    const { latitude, longitude, landmark, heartRate } = locationData;
     
     if (landmark && (landmark.fullAddress || landmark.displayName)) {
       // Use landmark/address if available
@@ -94,11 +95,34 @@ export const sendEmergencyAlert = async (contactPhone, contactName, userName, lo
       const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
       locationInfo += `🗺️ Maps: ${mapsLink}\n`;
     }
+
+    // Add heart rate information if available
+    if (heartRate && heartRate.bpm) {
+      const statusEmojis = {
+        normal: '✅',
+        mild_low: '⚠️',
+        extreme_low: '🚨',
+        mild_high: '⚠️',
+        high: '🚨',
+        extreme_high: '🚨🚨'
+      };
+      const statusLabels = {
+        normal: 'Normal',
+        mild_low: 'Mild Low',
+        extreme_low: 'Extreme Low',
+        mild_high: 'Mild High',
+        high: 'High',
+        extreme_high: 'Extreme High'
+      };
+      const emoji = statusEmojis[heartRate.status] || '💓';
+      const label = statusLabels[heartRate.status] || heartRate.status;
+      heartRateInfo = `💓 Heart Rate: ${heartRate.bpm} bpm (${label}) ${emoji}\n`;
+    }
   } else {
     locationInfo = '📍 Location: Not available\n';
   }
 
-  const message = `🚨 EMERGENCY ALERT 🚨\n\n${userName || 'A SafeLink user'} needs help immediately!\n\n${locationInfo}\n⚠️ This is an automated emergency alert. Please respond or call emergency services if needed.\n\nIf this is a false alarm, please inform ${userName || 'the user'}.\n\n-Stay Safe, SafeLink`;
+  const message = `🚨 EMERGENCY ALERT 🚨\n\n${userName || 'A SafeLink user'} needs help immediately!\n\n${locationInfo}${heartRateInfo}\n⚠️ This is an automated emergency alert. Please respond or call emergency services if needed.\n\nIf this is a false alarm, please inform ${userName || 'the user'}.\n\n-Stay Safe, SafeLink`;
 
   return await sendSMS(contactPhone, message);
 };

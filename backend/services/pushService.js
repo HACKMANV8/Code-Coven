@@ -1,17 +1,29 @@
 import webpush from 'web-push';
 
-// Configure VAPID keys (already in .env)
-const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+// Lazy load VAPID keys (read at runtime, not module load time)
+const getVapidKeys = () => {
+  return {
+    publicKey: process.env.VAPID_PUBLIC_KEY,
+    privateKey: process.env.VAPID_PRIVATE_KEY
+  };
+};
 
-// Set VAPID details for web-push
-if (vapidPublicKey && vapidPrivateKey) {
-  webpush.setVapidDetails(
-    'mailto:safelink@example.com', // Contact email (can be any)
-    vapidPublicKey,
-    vapidPrivateKey
-  );
-}
+// Initialize VAPID keys (called lazily)
+let vapidInitialized = false;
+const initializeVapid = () => {
+  if (vapidInitialized) return;
+  
+  const { publicKey, privateKey } = getVapidKeys();
+  if (publicKey && privateKey) {
+    webpush.setVapidDetails(
+      'mailto:safelink@example.com',
+      publicKey,
+      privateKey
+    );
+    vapidInitialized = true;
+    console.log('✅ VAPID keys configured for push notifications');
+  }
+};
 
 /**
  * Send push notification to a subscription
@@ -20,7 +32,11 @@ if (vapidPublicKey && vapidPrivateKey) {
  * @returns {Promise}
  */
 export const sendPushNotification = async (subscription, payload) => {
-  if (!vapidPublicKey || !vapidPrivateKey) {
+  // Initialize VAPID keys if not already done
+  initializeVapid();
+  
+  const { publicKey, privateKey } = getVapidKeys();
+  if (!publicKey || !privateKey) {
     console.warn('⚠️  VAPID keys not configured - push notifications disabled');
     return { 
       success: false, 
@@ -85,9 +101,10 @@ export const sendEmergencyPushAlert = async (subscription, userName, locationDat
   // Build location information
   let locationInfo = '';
   let mapsLink = '';
+  let heartRateInfo = '';
   
   if (locationData) {
-    const { latitude, longitude, landmark } = locationData;
+    const { latitude, longitude, landmark, heartRate } = locationData;
     
     if (landmark && (landmark.fullAddress || landmark.displayName)) {
       locationInfo = `${landmark.fullAddress || landmark.displayName}`;
@@ -96,11 +113,24 @@ export const sendEmergencyPushAlert = async (subscription, userName, locationDat
       locationInfo = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
       mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
     }
+
+    // Add heart rate information if available
+    if (heartRate && heartRate.bpm) {
+      const statusLabels = {
+        normal: 'Normal',
+        mild_low: 'Mild Low',
+        extreme_low: 'Extreme Low ⚠️',
+        mild_high: 'Mild High',
+        high: 'High ⚠️',
+        extreme_high: 'Extreme High 🚨'
+      };
+      heartRateInfo = `\n💓 Heart Rate: ${heartRate.bpm} bpm (${statusLabels[heartRate.status] || heartRate.status})`;
+    }
   }
 
   const notificationPayload = {
     title: '🚨 EMERGENCY ALERT 🚨',
-    body: `${userName || 'A SafeLink user'} needs help immediately!`,
+    body: `${userName || 'A SafeLink user'} needs help immediately!${heartRateInfo}`,
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
     image: undefined,
@@ -112,6 +142,7 @@ export const sendEmergencyPushAlert = async (subscription, userName, locationDat
         lng: locationData.longitude
       } : null,
       landmark: locationData?.landmark || null,
+      heartRate: locationData?.heartRate || null,
       timestamp: new Date().toISOString(),
       type: 'emergency'
     },
@@ -139,6 +170,7 @@ export const sendEmergencyPushAlert = async (subscription, userName, locationDat
  * Get VAPID public key (needed for frontend subscription)
  */
 export const getVapidPublicKey = () => {
-  return vapidPublicKey;
+  const { publicKey } = getVapidKeys();
+  return publicKey;
 };
 

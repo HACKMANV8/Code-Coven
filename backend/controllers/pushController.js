@@ -69,13 +69,19 @@ export const sendEmergencyPush = async (req, res) => {
     const { location } = req.body;
     const userName = req.user?.name || 'Unknown User';
 
-    // Save location to database if provided
+    // Save location to database if provided (with landmark and heart rate data)
     let locationId = null;
     if (location && location.latitude && location.longitude) {
       const locationDoc = new Location({
         latitude: location.latitude,
         longitude: location.longitude,
-        landmark: location.landmark || undefined
+        landmark: location.landmark || undefined,
+        heartRate: location.heartRate ? {
+          bpm: location.heartRate.bpm,
+          status: location.heartRate.status,
+          source: location.heartRate.source || 'sensor',
+          timestamp: location.heartRate.timestamp ? new Date(location.heartRate.timestamp) : new Date()
+        } : undefined
       });
       await locationDoc.save();
       locationId = locationDoc._id;

@@ -13,7 +13,8 @@ router.post("/", async (req, res) => {
       altitudeAccuracy, 
       heading, 
       speed,
-      landmark 
+      landmark,
+      heartRate
     } = req.body;
     
     if (!latitude || !longitude)
@@ -33,6 +34,16 @@ router.post("/", async (req, res) => {
     // Add landmark data if provided
     if (landmark) {
       locationData.landmark = landmark;
+    }
+
+    // Add heart rate data if provided
+    if (heartRate) {
+      locationData.heartRate = {
+        bpm: heartRate.bpm,
+        status: heartRate.status,
+        source: heartRate.source || 'sensor',
+        timestamp: heartRate.timestamp ? new Date(heartRate.timestamp) : new Date()
+      };
     }
 
     const location = new Location(locationData);

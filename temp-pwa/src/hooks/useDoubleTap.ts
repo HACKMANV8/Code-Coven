@@ -56,25 +56,37 @@ export const useDoubleTap = ({
         const { latitude, longitude } = position.coords;
         console.log("📍 Location:", latitude, longitude);
 
-        // Fetch nearby landmarks for emergency alert
-        let landmark = null;
-        let landmarkText = `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        try {
-          const { GeocodingService } = await import("@/services/geocodingService");
-          landmark = await GeocodingService.getNearbyLandmarks(latitude, longitude);
-          if (landmark.fullAddress || landmark.displayName) {
-            landmarkText = GeocodingService.formatLandmarkForAlert(landmark);
-            console.log("🏛️ Emergency alert landmark:", landmarkText);
-          }
-        } catch (error) {
-          console.warn("Could not fetch landmark for emergency, using coordinates:", error);
-        }
+        // Fetch nearby landmarks and heart rate (parallel for speed)
+        const [landmarkResult, heartRateResult] = await Promise.allSettled([
+          (async () => {
+            try {
+              const { GeocodingService } = await import("@/services/geocodingService");
+              return await GeocodingService.getNearbyLandmarks(latitude, longitude);
+            } catch (error) {
+              console.warn("Could not fetch landmark:", error);
+              return null;
+            }
+          })(),
+          (async () => {
+            try {
+              const { HeartRateService } = await import("@/services/heartRateService");
+              return await HeartRateService.getCurrentHeartRate();
+            } catch (error) {
+              console.warn("Could not get heart rate:", error);
+              return null;
+            }
+          })()
+        ]);
 
-        // Send emergency alert with location and landmark data
+        const landmark = landmarkResult.status === 'fulfilled' ? landmarkResult.value : null;
+        const heartRate = heartRateResult.status === 'fulfilled' ? heartRateResult.value : null;
+
+        // Send emergency alert with location, landmark, and heart rate data
         await sendEmergencyAlert({ 
           latitude, 
           longitude,
-          landmark: landmark || undefined
+          landmark: landmark || undefined,
+          heartRate: heartRate || undefined
         });
 
         console.log("🚨 Emergency alert sent successfully!");

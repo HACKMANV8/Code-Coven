@@ -92,3 +92,4 @@ Once configured, test the emergency alert:
 ⚠️ **Never commit `.env` file to Git!** It contains sensitive credentials.
 The `.env.example` file is safe to commit as it doesn't contain real credentials.
 
+

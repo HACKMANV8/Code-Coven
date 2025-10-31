@@ -34,6 +34,7 @@ export const sendPushAlerts = async (location: {
   latitude: number; 
   longitude: number; 
   landmark?: any;
+  heartRate?: any;
 }) => {
   try {
     // Send push notification to all subscribed contacts
@@ -53,7 +54,8 @@ export const sendPushAlerts = async (location: {
         location: {
           latitude: location.latitude,
           longitude: location.longitude,
-          landmark: location.landmark || undefined
+          landmark: location.landmark || undefined,
+          heartRate: location.heartRate || undefined
         }
       }),
     });
@@ -74,6 +76,7 @@ export const sendSmsAlerts = async (location: {
   latitude: number; 
   longitude: number; 
   landmark?: any;
+  heartRate?: any;
 }) => {
   try {
     // Get emergency contacts
@@ -106,7 +109,8 @@ export const sendSmsAlerts = async (location: {
             location: {
               latitude: location.latitude,
               longitude: location.longitude,
-              landmark: location.landmark || undefined
+              landmark: location.landmark || undefined,
+              heartRate: location.heartRate || undefined
             }
           }),
         });
@@ -142,14 +146,16 @@ export const sendEmergencyAlert = async (location: {
   latitude: number; 
   longitude: number; 
   landmark?: any;
+  heartRate?: any;
 }) => {
   try {
-    // First, send location to backend
+    // First, send location to backend (with heart rate if available)
     await alertAPI.sendAlert({
       latitude: location.latitude,
       longitude: location.longitude,
       timestamp: new Date().toISOString(),
       trigger: "emergency_button",
+      heartRate: location.heartRate || undefined,
     });
     
     // Try push notifications first (no credentials needed!)

@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
-import { AlertCircle, MapPin, Wifi, WifiOff } from "lucide-react";
+import { AlertCircle, MapPin, Wifi, WifiOff, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDoubleTap } from "@/hooks/useDoubleTap";
 import { LocationService } from "@/services/locationService";
 import { sendEmergencyAlert } from "@/services/alertService";
 import { NotificationService } from "@/services/notificationService";
 import { useToast } from "@/hooks/use-toast";
+import { useHeartRate } from "@/hooks/useHeartRate";
 import { Card } from "@/components/ui/card";
 
 export const EmergencyButton = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
+  const { heartRate, getCurrentHeartRate, statusInfo } = useHeartRate(false);
 
   // Update online status
   useEffect(() => {
@@ -62,28 +64,39 @@ export const EmergencyButton = () => {
         }
       );
 
-      // Fetch nearby landmarks
-      let landmark = null;
+      // Get heart rate (parallel with landmark fetch for speed)
+      const [landmarkResult, heartRateData] = await Promise.allSettled([
+        (async () => {
+          let landmark = null;
+          try {
+            const { GeocodingService } = await import("@/services/geocodingService");
+            landmark = await GeocodingService.getNearbyLandmarks(
+              location.latitude,
+              location.longitude
+            );
+          } catch (error) {
+            console.warn("Could not fetch landmark:", error);
+          }
+          return landmark;
+        })(),
+        getCurrentHeartRate().catch(() => null) // Get heart rate if available
+      ]);
+
+      const landmark = landmarkResult.status === 'fulfilled' ? landmarkResult.value : null;
+      const heartRate = heartRateData.status === 'fulfilled' ? heartRateData.value : null;
+
       let landmarkText = `Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
-      try {
-        const { GeocodingService } = await import("@/services/geocodingService");
-        landmark = await GeocodingService.getNearbyLandmarks(
-          location.latitude,
-          location.longitude
-        );
-        if (landmark.fullAddress || landmark.displayName) {
-          landmarkText = GeocodingService.formatLandmarkForAlert(landmark);
-          console.log("🏛️ Emergency alert landmark:", landmarkText);
-        }
-      } catch (error) {
-        console.warn("Could not fetch landmark for emergency, using coordinates:", error);
+      if (landmark?.fullAddress || landmark?.displayName) {
+        landmarkText = (await import("@/services/geocodingService")).GeocodingService.formatLandmarkForAlert(landmark);
+        console.log("🏛️ Emergency alert landmark:", landmarkText);
       }
 
-      // Send alert to backend with location and landmark data
+      // Send alert to backend with location, landmark, and heart rate data
       await sendEmergencyAlert({
         latitude: location.latitude,
         longitude: location.longitude,
-        landmark: landmark || undefined
+        landmark: landmark || undefined,
+        heartRate: heartRate || undefined
       });
 
       // Show success notification with location and landmark
@@ -210,6 +223,16 @@ export const EmergencyButton = () => {
             <MapPin className="h-3 w-3" />
             <span>Location tracking active</span>
           </div>
+
+          {/* Heart Rate Display */}
+          {heartRate && statusInfo && (
+            <div className={`flex items-center justify-center gap-2 text-xs px-3 py-1.5 rounded-full ${statusInfo.bg} border`}>
+              <Heart className={`h-3 w-3 ${statusInfo.color}`} />
+              <span className={statusInfo.color}>
+                Heart Rate: <strong>{heartRate.bpm} bpm</strong> ({statusInfo.label})
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </Card>

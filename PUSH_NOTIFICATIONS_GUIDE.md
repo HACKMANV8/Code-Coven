@@ -80,3 +80,4 @@ If push notifications aren't available, the system automatically tries SMS (if T
 
 **No setup needed - just enable push notifications and it works!** 🚀
 
+
