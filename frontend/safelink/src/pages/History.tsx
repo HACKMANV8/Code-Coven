@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, MapPin, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,12 +6,13 @@ import { Navbar } from '@/components/Navbar';
 import { WaveHeader } from '@/components/WaveHeader';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 interface LocationRecord {
-  id: number;
+  _id: string;
+  latitude: number;
+  longitude: number;
   timestamp: string;
-  location: string;
-  coords: string;
 }
 
 interface AlertRecord {
@@ -22,48 +23,53 @@ interface AlertRecord {
   sentTo: string[];
 }
 
-const mockLocationHistory: LocationRecord[] = [
-  {
-    id: 1,
-    timestamp: '2025-10-31 14:23:00',
-    location: 'Downtown Mall, 5th Avenue',
-    coords: '40.7589° N, 73.9851° W',
-  },
-  {
-    id: 2,
-    timestamp: '2025-10-31 12:15:00',
-    location: 'Central Park West',
-    coords: '40.7812° N, 73.9665° W',
-  },
-  {
-    id: 3,
-    timestamp: '2025-10-30 18:45:00',
-    location: 'Home - Brooklyn Heights',
-    coords: '40.6946° N, 73.9941° W',
-  },
-];
-
-const mockAlertHistory: AlertRecord[] = [
-  {
-    id: 1,
-    timestamp: '2025-10-31 14:23:12',
-    type: 'SOS Alert',
-    status: 'Delivered',
-    sentTo: ['John Doe', 'Jane Smith', 'Emergency Services'],
-  },
-  {
-    id: 2,
-    timestamp: '2025-10-29 22:10:05',
-    type: 'Check-in Alert',
-    status: 'Delivered',
-    sentTo: ['John Doe'],
-  },
-];
-
 export default function History() {
   const navigate = useNavigate();
-  const [locationHistory] = useState<LocationRecord[]>(mockLocationHistory);
-  const [alertHistory] = useState<AlertRecord[]>(mockAlertHistory);
+  const { toast } = useToast();
+  const [locationHistory, setLocationHistory] = useState<LocationRecord[]>([]);
+  const [alertHistory] = useState<AlertRecord[]>([
+    {
+      id: 1,
+      timestamp: '2025-10-31 14:23:12',
+      type: 'SOS Alert',
+      status: 'Delivered',
+      sentTo: ['John Doe', 'Jane Smith', 'Emergency Services'],
+    },
+    {
+      id: 2,
+      timestamp: '2025-10-29 22:10:05',
+      type: 'Check-in Alert',
+      status: 'Delivered',
+      sentTo: ['John Doe'],
+    },
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch location history from backend
+  useEffect(() => {
+    fetchLocationHistory();
+  }, []);
+
+  const fetchLocationHistory = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/location');
+      if (!response.ok) {
+        throw new Error('Failed to fetch location history');
+      }
+      const data = await response.json();
+      setLocationHistory(data);
+    } catch (error) {
+      console.error('Error fetching location history:', error);
+      toast({
+        title: "Error Loading History",
+        description: "Failed to load location history. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -99,34 +105,49 @@ export default function History() {
           </TabsList>
 
           <TabsContent value="locations" className="space-y-4">
-            {locationHistory.map((record, index) => (
-              <motion.div
-                key={record.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="p-5 card-shadow hover:card-shadow-hover transition-all duration-300">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-5 h-5 text-primary" />
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                <p className="text-muted-foreground mt-4">Loading location history...</p>
+              </div>
+            ) : locationHistory.length === 0 ? (
+              <Card className="p-12 text-center card-shadow">
+                <MapPin className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No Location History Yet</h3>
+                <p className="text-muted-foreground">
+                  Your location history will appear here when you use the app
+                </p>
+              </Card>
+            ) : (
+              locationHistory.map((record, index) => (
+                <motion.div
+                  key={record._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="p-5 card-shadow hover:card-shadow-hover transition-all duration-300">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                        <MapPin className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-foreground text-lg mb-1">
+                          Location Recorded
+                        </h4>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {record.latitude.toFixed(6)}° N, {record.longitude.toFixed(6)}° W
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {new Date(record.timestamp).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-foreground text-lg mb-1">
-                        {record.location}
-                      </h4>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {record.coords}
-                      </p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {record.timestamp}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
+                  </Card>
+                </motion.div>
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="alerts" className="space-y-4">

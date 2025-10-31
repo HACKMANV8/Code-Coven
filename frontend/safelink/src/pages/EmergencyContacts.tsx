@@ -32,11 +32,11 @@ export default function EmergencyContacts() {
       setLoading(true);
       const data = await emergencyContactsAPI.getAll();
       setContacts(data);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching contacts:', error);
       toast({
         title: "Error Loading Contacts",
-        description: error.message || "Failed to load contacts. Please try again.",
+        description: (error as Error).message || "Failed to load contacts. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -60,11 +60,11 @@ export default function EmergencyContacts() {
         title: "Contact Deleted",
         description: `${name} has been removed from your emergency contacts`,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting contact:', error);
       toast({
         title: "Error Deleting Contact",
-        description: error.message || "Failed to delete contact. Please try again.",
+        description: (error as Error).message || "Failed to delete contact. Please try again.",
         variant: "destructive",
       });
     } finally {

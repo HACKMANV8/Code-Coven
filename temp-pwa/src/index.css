@@ -133,5 +133,13 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    /* Add a fallback background color */
+    background-color: #f8f9fa;
   }
+}
+
+/* Add a simple fallback style */
+#root {
+  min-height: 100vh;
+  background-color: #f8f9fa;
 }

@@ -3,6 +3,10 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import contactRoutes from "./routes/contactRoutes.js";
+import locationRoutes from "./routes/locationRoutes.js";
+import alertRoutes from "./routes/alertRoutes.js";
+import smsRoutes from "./routes/smsRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -10,9 +14,13 @@ const app = express();
 // middlewares
 app.use(cors());
 app.use(express.json());
+app.use("/api/auth", authRoutes);
 
 // routes
+app.use("/api/alerts", alertRoutes);
 app.use("/api/emergency-contacts", contactRoutes);
+app.use("/api/location", locationRoutes);
+app.use("/api/sms", smsRoutes);
 
 // mongo connection
 mongoose

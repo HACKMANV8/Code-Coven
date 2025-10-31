@@ -1,4 +1,4 @@
-import { useLocation } from "@/hooks/useLocation";
+import axios from "axios";
 
 import { useEffect } from "react";
 import { Shield, Users, Clock, CheckCircle, Bluetooth, Zap } from "lucide-react";
@@ -7,22 +7,40 @@ import { PermissionsManager } from "@/components/PermissionsManager";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { BluetoothManager } from "@/components/BluetoothManager";
 import { Card } from "@/components/ui/card";
-import { AlertService } from "@/services/alertService";
+import { useLiveLocation } from "@/hooks/useLocation";
+import { sendEmergencyAlert } from "@/services/alertService";
 
 const Index = () => {
+  // Use the live location hook
+  useLiveLocation();
+
   useEffect(() => {
-    // Sync offline alerts when coming back online
-    const handleOnline = async () => {
-      console.log("Connection restored, syncing offline alerts...");
-      await AlertService.syncOfflineAlerts();
-    };
+    // Send initial location when app loads
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          console.log("📍 Sending initial location:", latitude, longitude);
 
-    window.addEventListener("online", handleOnline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-    };
+          try {
+            await axios.post("http://localhost:5000/api/location", {
+              latitude,
+              longitude,
+            });
+            console.log("✅ Initial location sent to backend");
+          } catch (err) {
+            console.error("❌ Failed to send initial location", err);
+          }
+        },
+        (err) => console.error("❌ Error getting initial location:", err.message)
+      );
+    } else {
+      console.error("❌ Geolocation not supported");
+    }
   }, []);
+
+  // Simple test to verify component is rendering
+  console.log("PWA Index component is rendering");
 
   const features = [
     {
@@ -53,6 +71,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
+      {/* Test message to verify rendering */}
+      <div style={{ position: 'fixed', top: 0, left: 0, zIndex: 1000, background: 'blue', color: 'white', padding: '10px' }}>
+        PWA is working!
+      </div>
+      
       {/* Header */}
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 py-6">

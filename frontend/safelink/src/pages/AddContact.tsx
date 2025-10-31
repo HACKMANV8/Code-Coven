@@ -43,7 +43,7 @@ export default function AddContact() {
     
     try {
       // Call backend API to save contact
-      await emergencyContactsAPI.create({
+      await emergencyContactsAPI.add({
         name: name.trim(),
         phone: phone.trim(),
         relation: relation.trim(),
@@ -57,11 +57,11 @@ export default function AddContact() {
       // Navigate back to emergency contacts page
       navigate('/emergency-contacts');
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding contact:', error);
       toast({
         title: "Error Adding Contact",
-        description: error.message || "Failed to add contact. Please try again.",
+        description: (error as Error).message || "Failed to add contact. Please try again.",
         variant: "destructive",
       });
     } finally {

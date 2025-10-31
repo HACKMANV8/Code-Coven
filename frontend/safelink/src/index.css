@@ -121,6 +121,8 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-body;
+    /* Add a fallback background color */
+    background-color: #FCE8D8;
   }
   
   h1, h2, h3, h4, h5, h6, button {
@@ -140,4 +142,10 @@ All colors MUST be HSL.
   .card-shadow-hover {
     box-shadow: var(--shadow-hover);
   }
+}
+
+/* Add a simple fallback style */
+#root {
+  min-height: 100vh;
+  background-color: #FCE8D8;
 }

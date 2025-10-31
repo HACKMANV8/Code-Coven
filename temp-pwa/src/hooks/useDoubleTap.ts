@@ -1,7 +1,5 @@
 import { useRef, useCallback } from "react";
-
-// ✅ Adjust the import path below if needed
-import { alertAPI } from "@/lib/api"; // we’ll define this next
+import { sendEmergencyAlert } from "@/services/alertService";
 
 interface DoubleTapOptions {
   onDoubleTap?: () => void;
@@ -42,20 +40,15 @@ export const useDoubleTap = ({
         const { latitude, longitude } = position.coords;
         console.log("📍 Location:", latitude, longitude);
 
-        // Send to backend
-        await alertAPI.sendAlert({
-          latitude,
-          longitude,
-          timestamp: new Date().toISOString(),
-          trigger: "double_tap",
-        });
+        // Send emergency alert with location
+        await sendEmergencyAlert({ latitude, longitude });
 
-        console.log("🚨 Alert sent to backend successfully!");
+        console.log("🚨 Emergency alert sent successfully!");
 
         if (onDoubleTap) onDoubleTap();
       } catch (err) {
-        console.error("❌ Failed to send alert:", err);
-        alert("Unable to access GPS or send alert.");
+        console.error("❌ Failed to send emergency alert:", err);
+        alert("Unable to access GPS or send emergency alert.");
       }
     } else {
       if (tapTimer.current) clearTimeout(tapTimer.current);
