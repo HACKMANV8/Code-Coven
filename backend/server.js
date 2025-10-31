@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import smsRoutes from "./routes/smsRoutes.js";
 
 dotenv.config(); // Load environment variables
 console.log("🧩 MONGO_URI from .env:", process.env.MONGO_URI);
@@ -19,6 +20,7 @@ connectDB();
 
 // Routes
 app.use("/api/emergency-contacts", contactRoutes);
+app.use("/api/sms", smsRoutes);
 
 app.get("/", (req, res) => {
   res.send("✅ Backend is running successfully!");

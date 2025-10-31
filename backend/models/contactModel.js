@@ -5,7 +5,11 @@ const contactSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  phoneNumber: {
+  phone: {
+    type: String,
+    required: true,
+  },
+  relation: {
     type: String,
     required: true,
   },
