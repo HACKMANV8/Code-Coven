@@ -1,57 +1,16 @@
 export class NotificationService {
-  private static vapidPublicKey: string = import.meta.env.VITE_VAPID_PUBLIC_KEY || "";
-
-  static async requestPermission(): Promise<NotificationPermission> {
+  static async requestPermission(): Promise<boolean> {
     if (!("Notification" in window)) {
-      throw new Error("This browser does not support notifications");
+      console.warn("This browser does not support notifications");
+      return false;
     }
 
-    const permission = await Notification.requestPermission();
-    return permission;
-  }
-
-  static async subscribeToPush(
-    registration: ServiceWorkerRegistration
-  ): Promise<PushSubscription | null> {
     try {
-      const applicationServerKey = this.vapidPublicKey 
-        ? this.urlBase64ToUint8Array(this.vapidPublicKey)
-        : undefined;
-      
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey,
-      });
-
-      // Send subscription to your backend
-      await this.sendSubscriptionToBackend(subscription);
-
-      return subscription;
+      const permission = await Notification.requestPermission();
+      return permission === "granted";
     } catch (error) {
-      console.error("Failed to subscribe to push notifications:", error);
-      return null;
-    }
-  }
-
-  static async sendSubscriptionToBackend(subscription: PushSubscription): Promise<void> {
-    // Replace with your actual backend endpoint
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "/api/push/subscribe";
-
-    try {
-      const response = await fetch(backendUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(subscription),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to send subscription to backend");
-      }
-    } catch (error) {
-      console.error("Error sending subscription to backend:", error);
-      throw error;
+      console.error("Error requesting notification permission:", error);
+      return false;
     }
   }
 
@@ -59,43 +18,61 @@ export class NotificationService {
     title: string,
     options?: NotificationOptions
   ): Promise<void> {
-    if (!("serviceWorker" in navigator)) {
+    // Check if notifications are supported
+    if (!("Notification" in window)) {
+      console.warn("This browser does not support notifications");
       return;
     }
 
-    // Vibrate if supported
-    if (navigator.vibrate) {
-      navigator.vibrate([200, 100, 200]);
+    // Check if permission is granted
+    if (Notification.permission !== "granted") {
+      console.warn("Notification permission not granted");
+      // Try to request permission
+      const granted = await this.requestPermission();
+      if (!granted) {
+        console.warn("Unable to show notification: permission not granted");
+        return;
+      }
     }
 
-    const registration = await navigator.serviceWorker.ready;
-    await registration.showNotification(title, {
-      icon: "/pwa-192x192.png",
-      badge: "/pwa-192x192.png",
-      ...options,
-    });
-  }
-
-  private static urlBase64ToUint8Array(base64String: string): BufferSource {
-    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, "+")
-      .replace(/_/g, "/");
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
+    try {
+      // Try to show browser notification first
+      new Notification(title, options);
+    } catch (error) {
+      console.warn("Failed to show browser notification:", error);
+      // Fallback to service worker notification if available
+      if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+        try {
+          await navigator.serviceWorker.ready.then((registration) => {
+            return registration.showNotification(title, options || {});
+          });
+        } catch (swError) {
+          console.warn("Failed to show service worker notification:", swError);
+        }
+      }
     }
-    return outputArray.buffer;
   }
 
-  static isSupported(): boolean {
-    return "Notification" in window && "serviceWorker" in navigator;
-  }
-
-  static getPermissionStatus(): NotificationPermission {
-    return Notification.permission;
+  static async showLocalNotification(
+    title: string,
+    body: string,
+    tag?: string
+  ): Promise<void> {
+    // Create a simple in-app notification as fallback
+    const notification = document.createElement("div");
+    notification.className = "fixed top-4 right-4 z-50 p-4 bg-primary text-white rounded-lg shadow-lg max-w-sm";
+    notification.innerHTML = `
+      <div class="font-semibold">${title}</div>
+      <div class="text-sm opacity-90">${body}</div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove notification after 5 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 5000);
   }
 }

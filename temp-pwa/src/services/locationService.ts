@@ -23,8 +23,13 @@ export class LocationService {
         return;
       }
 
+      const timeoutId = setTimeout(() => {
+        reject(new Error("Location request timed out. Please ensure location services are enabled."));
+      }, 15000); // 15 second timeout
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          clearTimeout(timeoutId);
           resolve({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
@@ -33,12 +38,13 @@ export class LocationService {
           });
         },
         (error) => {
+          clearTimeout(timeoutId);
           reject(error);
         },
         {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 0,
+          maximumAge: 60000, // Accept positions up to 1 minute old
         }
       );
     });
@@ -62,7 +68,7 @@ export class LocationService {
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 0,
+        maximumAge: 60000, // Accept positions up to 1 minute old
       }
     );
   }

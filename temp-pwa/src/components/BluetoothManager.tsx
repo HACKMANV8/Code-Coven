@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bluetooth, BluetoothConnected, Battery, AlertCircle } from "lucide-react";
+import { Bluetooth, BluetoothConnected, Battery, AlertCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BluetoothService, BluetoothDeviceInfo } from "@/services/bluetoothService";
@@ -11,10 +11,16 @@ export const BluetoothManager = () => {
   const [device, setDevice] = useState<BluetoothDeviceInfo | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [batteryLevel, setBatteryLevel] = useState<number | undefined>();
+  const [bluetoothError, setBluetoothError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsSupported(BluetoothService.isSupported());
+    const supported = BluetoothService.isSupported();
+    setIsSupported(supported);
+    
+    if (!supported) {
+      setBluetoothError("Web Bluetooth API is not supported in your browser");
+    }
     
     // Check if there's already a connected device
     const connectedDevice = BluetoothService.getConnectedDevice();
@@ -25,6 +31,7 @@ export const BluetoothManager = () => {
 
   const handleConnectDevice = async () => {
     setIsConnecting(true);
+    setBluetoothError(null);
 
     try {
       const deviceInfo = await BluetoothService.requestDevice();
@@ -42,9 +49,12 @@ export const BluetoothManager = () => {
       });
     } catch (error) {
       console.error("Bluetooth connection error:", error);
+      const errorMessage = (error as Error).message || "Could not connect to device";
+      setBluetoothError(errorMessage);
+      
       toast({
         title: "Connection Failed",
-        description: error instanceof Error ? error.message : "Could not connect to device",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -57,6 +67,7 @@ export const BluetoothManager = () => {
       await BluetoothService.disconnect();
       setDevice(null);
       setBatteryLevel(undefined);
+      setBluetoothError(null);
       
       toast({
         title: "Device Disconnected",
@@ -77,6 +88,19 @@ export const BluetoothManager = () => {
             <p className="text-sm text-muted-foreground">
               Your browser doesn't support Web Bluetooth API. Try using Chrome, Edge, or Opera on desktop or Android.
             </p>
+            <div className="pt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  // Try to open documentation or help page
+                  window.open('https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API', '_blank');
+                }}
+              >
+                <Info className="h-4 w-4 mr-2" />
+                Learn More
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -111,6 +135,18 @@ export const BluetoothManager = () => {
             </Badge>
           )}
         </div>
+
+        {bluetoothError && (
+          <div className="bg-destructive/10 p-3 rounded-lg border border-destructive/20">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-destructive">Connection Error</p>
+                <p className="text-xs text-destructive/80">{bluetoothError}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {device?.connected ? (
           <div className="space-y-3 pt-2">
@@ -173,6 +209,13 @@ export const BluetoothManager = () => {
                 </>
               )}
             </Button>
+
+            <div className="bg-background/50 p-3 rounded-lg">
+              <p className="text-xs text-muted-foreground">
+                <strong>Note:</strong> Web Bluetooth requires Chrome, Edge, or Opera on desktop, or Chrome on Android. 
+                Make sure Bluetooth is enabled on your device.
+              </p>
+            </div>
           </div>
         )}
       </div>

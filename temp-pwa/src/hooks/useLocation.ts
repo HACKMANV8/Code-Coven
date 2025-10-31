@@ -5,7 +5,7 @@ export function useLiveLocation() {
     if ("geolocation" in navigator) {
       const watchId = navigator.geolocation.watchPosition(
         async (pos) => {
-          const { latitude, longitude } = pos.coords;
+          const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = pos.coords;
           console.log("📍 Live location update:", latitude, longitude);
 
           try {
@@ -13,7 +13,15 @@ export function useLiveLocation() {
             const response = await fetch("http://localhost:5000/api/location", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ latitude, longitude }),
+              body: JSON.stringify({ 
+                latitude, 
+                longitude,
+                accuracy,
+                altitude: altitude || null,
+                altitudeAccuracy: altitudeAccuracy || null,
+                heading: heading || null,
+                speed: speed || null
+              }),
             });
 
             if (!response.ok) {

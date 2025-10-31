@@ -1,46 +1,17 @@
-import axios from "axios";
-
 import { useEffect } from "react";
-import { Shield, Users, Clock, CheckCircle, Bluetooth, Zap } from "lucide-react";
+import { Shield, Users, Clock, CheckCircle, Bluetooth, Zap, Smartphone } from "lucide-react";
 import { EmergencyButton } from "@/components/EmergencyButton";
+import { MotionEmergencyButton } from "@/components/MotionEmergencyButton";
 import { PermissionsManager } from "@/components/PermissionsManager";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { BluetoothManager } from "@/components/BluetoothManager";
 import { Card } from "@/components/ui/card";
 import { useLiveLocation } from "@/hooks/useLocation";
-import { sendEmergencyAlert } from "@/services/alertService";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   // Use the live location hook
   useLiveLocation();
-
-  useEffect(() => {
-    // Send initial location when app loads
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const { latitude, longitude } = pos.coords;
-          console.log("📍 Sending initial location:", latitude, longitude);
-
-          try {
-            await axios.post("http://localhost:5000/api/location", {
-              latitude,
-              longitude,
-            });
-            console.log("✅ Initial location sent to backend");
-          } catch (err) {
-            console.error("❌ Failed to send initial location", err);
-          }
-        },
-        (err) => console.error("❌ Error getting initial location:", err.message)
-      );
-    } else {
-      console.error("❌ Geolocation not supported");
-    }
-  }, []);
-
-  // Simple test to verify component is rendering
-  console.log("PWA Index component is rendering");
 
   const features = [
     {
@@ -56,9 +27,9 @@ const Index = () => {
       gradient: "from-accent/10 to-primary/10",
     },
     {
-      icon: Users,
-      title: "Notify Contacts",
-      description: "Your trusted contacts receive immediate notifications",
+      icon: Smartphone,
+      title: "Motion Detection",
+      description: "Shake your device to trigger emergency alerts when Bluetooth isn't available",
       gradient: "from-success/10 to-primary/10",
     },
     {
@@ -71,11 +42,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      {/* Test message to verify rendering */}
-      <div style={{ position: 'fixed', top: 0, left: 0, zIndex: 1000, background: 'blue', color: 'white', padding: '10px' }}>
-        PWA is working!
-      </div>
-      
       {/* Header */}
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 py-6">
@@ -122,12 +88,28 @@ const Index = () => {
                 Emergency Alert
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-                When you need help, double-tap the button below. Your emergency contacts
-                will be instantly notified with your precise location.
+                When you need help, use one of the methods below to send an emergency alert with your precise location.
               </p>
             </div>
 
-            <EmergencyButton />
+            <Tabs defaultValue="double-tap" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="double-tap" className="flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Double Tap
+                </TabsTrigger>
+                <TabsTrigger value="motion" className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4" />
+                  Motion Shake
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="double-tap">
+                <EmergencyButton />
+              </TabsContent>
+              <TabsContent value="motion">
+                <MotionEmergencyButton />
+              </TabsContent>
+            </Tabs>
 
             <div className="flex items-center justify-center gap-2 text-sm text-success bg-success/10 px-4 py-2 rounded-full inline-flex">
               <CheckCircle className="h-4 w-4" />
@@ -171,8 +153,8 @@ const Index = () => {
               <li className="flex gap-3 items-start">
                 <span className="font-bold text-lg text-primary min-w-[24px]">1</span>
                 <div>
-                  <strong className="text-foreground">Double-tap emergency button</strong>
-                  <p className="text-muted-foreground mt-1">Quick and discreet activation when you need help</p>
+                  <strong className="text-foreground">Trigger emergency alert</strong>
+                  <p className="text-muted-foreground mt-1">Double-tap the button or shake your device 3 times quickly</p>
                 </div>
               </li>
               <li className="flex gap-3 items-start">

@@ -6,12 +6,28 @@ import "./index.css";
 if ("geolocation" in navigator) {
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      console.log("Initial location:", pos.coords.latitude, pos.coords.longitude);
+      const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = pos.coords;
+      console.log("Initial location:", latitude, longitude);
+      
+      // Send initial location to backend
+      fetch("http://localhost:5000/api/location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          latitude, 
+          longitude,
+          accuracy,
+          altitude: altitude || null,
+          altitudeAccuracy: altitudeAccuracy || null,
+          heading: heading || null,
+          speed: speed || null
+        }),
+      }).catch(err => console.error("Failed to send initial location:", err));
     },
     (err) => {
       console.warn("Location permission denied or unavailable:", err.message);
     },
-    { enableHighAccuracy: true }
+    { enableHighAccuracy: true, timeout: 10000 }
   );
 } else {
   console.warn("Geolocation not supported in this browser.");

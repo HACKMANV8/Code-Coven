@@ -5,12 +5,20 @@ const router = express.Router();
 
 router.post("/", async (req, res) => {
   try {
-    const { latitude, longitude } = req.body;
+    const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = req.body;
     if (!latitude || !longitude)
       return res.status(400).json({ error: "Missing coordinates" });
 
     // Save location to database
-    const location = new Location({ latitude, longitude });
+    const location = new Location({ 
+      latitude, 
+      longitude,
+      accuracy,
+      altitude,
+      altitudeAccuracy,
+      heading,
+      speed
+    });
     await location.save();
 
     console.log("📍 Saved location:", latitude, longitude);

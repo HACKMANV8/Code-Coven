@@ -8,7 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Test from "./pages/Test";
 import NotFound from "./pages/NotFound";
-import History from "./pages/History"; // ✅ newly added import
+import History from "./pages/History";
 
 // Create QueryClient outside of component with proper configuration
 const queryClient = new QueryClient({
@@ -20,7 +20,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const App: React.FC = () => {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -28,22 +28,15 @@ const App: React.FC = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Home */}
             <Route path="/" element={<Index />} />
-            
-            {/* Test Page */}
             <Route path="/test" element={<Test />} />
-
-            {/* ✅ Add your new History page route */}
             <Route path="/history" element={<History />} />
-
-            {/* Catch-all (NotFound) */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;

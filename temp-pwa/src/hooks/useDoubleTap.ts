@@ -28,13 +28,29 @@ export const useDoubleTap = ({
       console.log("Double tap detected — fetching location...");
 
       try {
-        // Get current location
+        // Get current location with better error handling and timeout management
         const position = await new Promise<GeolocationPosition>(
-          (resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000,
-            })
+          (resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+              reject(new Error("Location request timed out. Please ensure location services are enabled."));
+            }, 15000); // 15 second timeout
+
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                clearTimeout(timeoutId);
+                resolve(position);
+              },
+              (error) => {
+                clearTimeout(timeoutId);
+                reject(error);
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000, // Accept positions up to 1 minute old
+              }
+            );
+          }
         );
 
         const { latitude, longitude } = position.coords;
@@ -48,7 +64,29 @@ export const useDoubleTap = ({
         if (onDoubleTap) onDoubleTap();
       } catch (err) {
         console.error("❌ Failed to send emergency alert:", err);
-        alert("Unable to access GPS or send emergency alert.");
+        
+        // Handle different types of errors
+        let errorMessage = "Unable to access GPS or send emergency alert.";
+        
+        if (err instanceof GeolocationPositionError) {
+          switch (err.code) {
+            case GeolocationPositionError.PERMISSION_DENIED:
+              errorMessage = "Location access denied. Please enable location permissions for this app.";
+              break;
+            case GeolocationPositionError.POSITION_UNAVAILABLE:
+              errorMessage = "Location information unavailable. Please check your device's location settings.";
+              break;
+            case GeolocationPositionError.TIMEOUT:
+              errorMessage = "Location request timed out. Please ensure location services are enabled and try again.";
+              break;
+            default:
+              errorMessage = "Unable to access location. Please check your device's location settings.";
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        
+        alert(errorMessage);
       }
     } else {
       if (tapTimer.current) clearTimeout(tapTimer.current);

@@ -1,5 +1,3 @@
-/// <reference path="../vite-env.d.ts" />
-
 export interface BluetoothDeviceInfo {
   id: string;
   name: string;
@@ -8,14 +6,20 @@ export interface BluetoothDeviceInfo {
 }
 
 export class BluetoothService {
-  private static device: any = null;
-  private static server: any = null;
+  private static device: BluetoothDevice | null = null;
+  private static server: BluetoothRemoteGATTServer | null = null;
 
   static isSupported(): boolean {
-    return 'bluetooth' in navigator;
+    // Check if Web Bluetooth is available and not globally disabled
+    return 'bluetooth' in navigator && navigator.bluetooth !== undefined;
   }
 
   static async requestDevice(): Promise<BluetoothDeviceInfo> {
+    // Check if Bluetooth is supported
+    if (!this.isSupported()) {
+      throw new Error('Web Bluetooth API is not supported or is disabled in your browser');
+    }
+
     try {
       // Request Bluetooth device with common safety device services
       const device = await navigator.bluetooth.requestDevice({
@@ -35,11 +39,19 @@ export class BluetoothService {
       };
     } catch (error) {
       console.error('Bluetooth device request failed:', error);
-      throw new Error('Failed to connect to Bluetooth device');
+      
+      // Handle specific error types
+      if ((error as Error).name === 'NotFoundError') {
+        throw new Error('Web Bluetooth API is not available. Make sure you are using Chrome, Edge, or Opera on desktop, or Chrome on Android.');
+      } else if ((error as Error).name === 'SecurityError') {
+        throw new Error('Bluetooth access was blocked for security reasons. Please check your browser settings.');
+      } else {
+        throw new Error((error as Error).message || 'Failed to connect to Bluetooth device');
+      }
     }
   }
 
-  static async connect(device?: any): Promise<void> {
+  static async connect(device?: BluetoothDevice): Promise<void> {
     const targetDevice = device || this.device;
     
     if (!targetDevice) {
@@ -55,7 +67,7 @@ export class BluetoothService {
       console.log('Connected to GATT server');
     } catch (error) {
       console.error('Connection failed:', error);
-      throw new Error('Failed to connect to device');
+      throw new Error((error as Error).message || 'Failed to connect to device');
     }
   }
 
@@ -91,7 +103,7 @@ export class BluetoothService {
       await characteristic.startNotifications();
       
       characteristic.addEventListener('characteristicvaluechanged', (event) => {
-        const target = event.target as any;
+        const target = event.target as BluetoothRemoteGATTCharacteristic;
         const value = target.value;
         
         // Example: trigger emergency if heart rate spikes above threshold
@@ -106,7 +118,7 @@ export class BluetoothService {
       });
     } catch (error) {
       console.error('Failed to listen for emergency trigger:', error);
-      throw error;
+      throw new Error((error as Error).message || 'Failed to listen for emergency trigger');
     }
   }
 

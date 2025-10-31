@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertCircle, MapPin, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDoubleTap } from "@/hooks/useDoubleTap";
 import { LocationService } from "@/services/locationService";
-import { AlertService } from "@/services/alertService";
+import { sendEmergencyAlert } from "@/services/alertService";
 import { NotificationService } from "@/services/notificationService";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
@@ -14,7 +14,7 @@ export const EmergencyButton = () => {
   const { toast } = useToast();
 
   // Update online status
-  useState(() => {
+  useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -25,46 +25,104 @@ export const EmergencyButton = () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  });
+  }, []);
 
-  const sendEmergencyAlert = async () => {
+  const sendEmergencyAlertHandler = async () => {
     if (isSending) return;
 
     setIsSending(true);
 
     try {
-      // Get current location
-      const location = await LocationService.getCurrentLocation();
+      // Get current location with better error handling
+      const location = await new Promise<{ latitude: number; longitude: number; accuracy: number }>(
+        (resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            reject(new Error("Location request timed out. Please ensure location services are enabled."));
+          }, 15000); // 15 second timeout
+
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              clearTimeout(timeoutId);
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+              });
+            },
+            (error) => {
+              clearTimeout(timeoutId);
+              reject(error);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 60000, // Accept positions up to 1 minute old
+            }
+          );
+        }
+      );
 
       // Send alert to backend
-      await AlertService.sendEmergencyAlert({
-        location,
-        timestamp: Date.now(),
-        alertType: "emergency",
-        message: "Emergency alert triggered via double-tap",
+      await sendEmergencyAlert({
+        latitude: location.latitude,
+        longitude: location.longitude
       });
 
-      // Show local notification
-      await NotificationService.showNotification("Emergency Alert Sent", {
-        body: `Your emergency contacts have been notified. Location: ${location.latitude.toFixed(
-          6
-        )}, ${location.longitude.toFixed(6)}`,
-        tag: "emergency-alert",
-        requireInteraction: true,
-      });
+      // Show success notification with location
+      const locationText = `Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+      
+      // Try to show notification with proper permission handling
+      try {
+        await NotificationService.showNotification("Emergency Alert Sent", {
+          body: `Your emergency contacts have been notified. ${locationText}`,
+          tag: "emergency-alert",
+          requireInteraction: true,
+        });
+      } catch (notificationError) {
+        console.warn("Could not show notification:", notificationError);
+        // Fallback to toast notification with location
+        toast({
+          title: "Emergency Alert Sent",
+          description: `Your emergency contacts have been notified. ${locationText}`,
+          variant: "default",
+        });
+        return;
+      }
 
       toast({
         title: "Emergency Alert Sent",
-        description: "Your emergency contacts have been notified with your location.",
+        description: `Your emergency contacts have been notified. ${locationText}`,
         variant: "default",
       });
+
     } catch (error) {
       console.error("Failed to send emergency alert:", error);
-
+      
+      // Handle different types of errors
+      let errorMessage = "Unable to access GPS or send emergency alert.";
+      
+      if (error instanceof GeolocationPositionError) {
+        switch (error.code) {
+          case GeolocationPositionError.PERMISSION_DENIED:
+            errorMessage = "Location access denied. Please enable location permissions for this app.";
+            break;
+          case GeolocationPositionError.POSITION_UNAVAILABLE:
+            errorMessage = "Location information unavailable. Please check your device's location settings.";
+            break;
+          case GeolocationPositionError.TIMEOUT:
+            errorMessage = "Location request timed out. Please ensure location services are enabled and try again.";
+            break;
+          default:
+            errorMessage = "Unable to access location. Please check your device's location settings.";
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: isOnline ? "Alert Failed" : "Stored for Later",
         description: isOnline
-          ? "Unable to send alert. Please try again."
+          ? errorMessage
           : "You're offline. Alert will be sent when connection is restored.",
         variant: isOnline ? "destructive" : "default",
       });
@@ -74,7 +132,7 @@ export const EmergencyButton = () => {
   };
 
   const handleDoubleTap = useDoubleTap({
-    onDoubleTap: sendEmergencyAlert,
+    onDoubleTap: sendEmergencyAlertHandler,
     delay: 300,
     tapCount: 2,
   });
