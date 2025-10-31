@@ -1,3 +1,5 @@
+import { useLocation } from "@/hooks/useLocation";
+
 import { useEffect } from "react";
 import { Shield, Users, Clock, CheckCircle, Bluetooth, Zap } from "lucide-react";
 import { EmergencyButton } from "@/components/EmergencyButton";

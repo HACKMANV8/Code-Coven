@@ -1,81 +1,62 @@
-// frontend/src/lib/api.ts
-// Central API service for all backend communication
+// Device API
+import { apiCall } from "./apiCall";
 
-const API_BASE_URL = 'http://localhost:5000/api';
-
-// Generic API call handler with error handling
-async function apiCall(endpoint: string, options: RequestInit = {}) {
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
+// 🧩 Device-related API calls
+export const deviceAPI = {
+  connect: async (deviceData: {
+    deviceId: string;
+    deviceName: string;
+    deviceType: string;
+    macAddress: string;
+  }) => {
+    return apiCall("/devices/connect", {
+      method: "POST",
+      body: JSON.stringify(deviceData),
     });
+  },
 
-    const data = await response.json();
+  getConnected: async () => {
+    return apiCall("/devices/connected");
+  },
 
-    if (!response.ok) {
-      throw new Error(data.message || 'Something went wrong');
-    }
+  disconnect: async (deviceId: string) => {
+    return apiCall(`/devices/disconnect/${deviceId}`, {
+      method: "PUT",
+    });
+  },
 
-    return data;
-  } catch (error) {
-    console.error('API Error:', error);
-    throw error;
-  }
-}
-
-// Emergency Contacts API
-export const emergencyContactsAPI = {
-  // Get all contacts
   getAll: async () => {
-    return apiCall('/emergency-contacts');
+    return apiCall("/devices/all");
   },
 
-  // Get single contact by ID
-  getById: async (id: string) => {
-    return apiCall(`/emergency-contacts/${id}`);
-  },
-
-  // Create new contact
-  create: async (contactData: { name: string; phone: string; relation: string }) => {
-    return apiCall('/emergency-contacts', {
-      method: 'POST',
-      body: JSON.stringify(contactData),
-    });
-  },
-
-  // Update contact
-  update: async (id: string, contactData: { name: string; phone: string; relation: string }) => {
-    return apiCall(`/emergency-contacts/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(contactData),
-    });
-  },
-
-  // Delete contact
-  delete: async (id: string) => {
-    return apiCall(`/emergency-contacts/${id}`, {
-      method: 'DELETE',
+  updateBattery: async (deviceId: string, batteryLevel: number) => {
+    return apiCall(`/devices/battery/${deviceId}`, {
+      method: "PUT",
+      body: JSON.stringify({ batteryLevel }),
     });
   },
 };
 
-// SMS/Alert API (add this when we integrate SMS functionality)
-export const alertAPI = {
-  sendAlert: async (alertData: { location: string; message: string }) => {
-    return apiCall('/alerts/send', {
-      method: 'POST',
-      body: JSON.stringify(alertData),
+// 🆘 Emergency Contacts API calls
+export const emergencyContactsAPI = {
+  getAll: async () => {
+    return apiCall("/emergency-contacts");
+  },
+
+  add: async (contactData: {
+    name: string;
+    phone: string;
+    relation: string;
+  }) => {
+    return apiCall("/emergency-contacts", {
+      method: "POST",
+      body: JSON.stringify(contactData),
     });
   },
-};
 
-// History API (for tracking past alerts)
-export const historyAPI = {
-  getHistory: async () => {
-    return apiCall('/history');
+  delete: async (contactId: string) => {
+    return apiCall(`/emergency-contacts/${contactId}`, {
+      method: "DELETE",
+    });
   },
 };

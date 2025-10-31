@@ -2,18 +2,34 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Register service worker for PWA
+// ✅ Ask for location permission when app starts
+if ("geolocation" in navigator) {
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      console.log("Initial location:", pos.coords.latitude, pos.coords.longitude);
+    },
+    (err) => {
+      console.warn("Location permission denied or unavailable:", err.message);
+    },
+    { enableHighAccuracy: true }
+  );
+} else {
+  console.warn("Geolocation not supported in this browser.");
+}
+
+// ✅ Register service worker for PWA
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
       .then((registration) => {
-        console.log("SW registered:", registration);
+        console.log("✅ Service Worker registered successfully:", registration);
       })
       .catch((error) => {
-        console.log("SW registration failed:", error);
+        console.error("❌ Service Worker registration failed:", error);
       });
   });
 }
 
+// ✅ Mount the React App
 createRoot(document.getElementById("root")!).render(<App />);
