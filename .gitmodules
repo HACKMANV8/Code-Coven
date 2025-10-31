@@ -1,0 +1,3 @@
+[submodule "frontend/safelink"]
+	path = frontend/safelink
+	url = https://github.com/parinaB/safelink.git
