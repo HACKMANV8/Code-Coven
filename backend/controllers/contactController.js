@@ -10,6 +10,23 @@ export const getContacts = async (req, res) => {
   }
 };
 
+// 🟢 GET single contact by ID
+export const getContactById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const contact = await Contact.findById(id);
+
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    res.json(contact);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching contact: " + error.message });
+  }
+};
+
 // 🟢 POST add a new contact
 export const addContact = async (req, res) => {
   const { name, phone, relation } = req.body;

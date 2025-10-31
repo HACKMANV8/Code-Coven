@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { emergencyContactsAPI } from '@/lib/api';
 
 export default function AddContact() {
   const navigate = useNavigate();
@@ -16,8 +17,9 @@ export default function AddContact() {
   const [phone, setPhone] = useState('');
   const [relation, setRelation] = useState('');
   const [errors, setErrors] = useState({ name: false, phone: false, relation: false });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const newErrors = {
@@ -37,12 +39,34 @@ export default function AddContact() {
       return;
     }
     
-    toast({
-      title: "Contact Added",
-      description: `${name} has been added to your emergency contacts`,
-    });
+    setIsSubmitting(true);
     
-    navigate('/emergency-contacts');
+    try {
+      // Call backend API to save contact
+      await emergencyContactsAPI.create({
+        name: name.trim(),
+        phone: phone.trim(),
+        relation: relation.trim(),
+      });
+      
+      toast({
+        title: "Contact Added Successfully",
+        description: `${name} has been added to your emergency contacts`,
+      });
+      
+      // Navigate back to emergency contacts page
+      navigate('/emergency-contacts');
+      
+    } catch (error: any) {
+      console.error('Error adding contact:', error);
+      toast({
+        title: "Error Adding Contact",
+        description: error.message || "Failed to add contact. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -83,6 +107,7 @@ export default function AddContact() {
                     setErrors(prev => ({ ...prev, name: false }));
                   }}
                   className={`rounded-2xl ${errors.name ? 'border-destructive' : ''}`}
+                  disabled={isSubmitting}
                 />
                 {errors.name && (
                   <p className="text-sm text-destructive">Name is required</p>
@@ -94,13 +119,14 @@ export default function AddContact() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+1 234 567 8900"
+                  placeholder="+91 98765 43210"
                   value={phone}
                   onChange={(e) => {
                     setPhone(e.target.value);
                     setErrors(prev => ({ ...prev, phone: false }));
                   }}
                   className={`rounded-2xl ${errors.phone ? 'border-destructive' : ''}`}
+                  disabled={isSubmitting}
                 />
                 {errors.phone && (
                   <p className="text-sm text-destructive">Phone number is required</p>
@@ -118,6 +144,7 @@ export default function AddContact() {
                     setErrors(prev => ({ ...prev, relation: false }));
                   }}
                   className={`rounded-2xl ${errors.relation ? 'border-destructive' : ''}`}
+                  disabled={isSubmitting}
                 />
                 {errors.relation && (
                   <p className="text-sm text-destructive">Relation is required</p>
@@ -127,9 +154,10 @@ export default function AddContact() {
               <Button 
                 type="submit" 
                 className="w-full rounded-2xl h-12 text-base font-semibold hover:scale-[1.02] transition-transform"
+                disabled={isSubmitting}
               >
                 <Save className="w-5 h-5 mr-2" />
-                Save Contact
+                {isSubmitting ? 'Saving...' : 'Save Contact'}
               </Button>
             </form>
           </Card>
