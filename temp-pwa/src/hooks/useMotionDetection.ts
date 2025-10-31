@@ -74,18 +74,31 @@ export const useMotionDetection = () => {
             {
               enableHighAccuracy: true,
               timeout: 10000,
-              maximumAge: 60000, // Accept positions up to 1 minute old
+              maximumAge: 0, // Always get fresh location for emergency alerts
             }
           );
         });
 
         const { latitude, longitude } = position.coords;
         
+        // Fetch nearby landmarks for emergency alert
+        let landmarkText = `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        try {
+          const { GeocodingService } = await import("@/services/geocodingService");
+          const landmark = await GeocodingService.getNearbyLandmarks(latitude, longitude);
+          if (landmark.fullAddress || landmark.displayName) {
+            landmarkText = GeocodingService.formatLandmarkForAlert(landmark);
+            console.log("🏛️ Emergency alert landmark:", landmarkText);
+          }
+        } catch (error) {
+          console.warn("Could not fetch landmark for emergency, using coordinates:", error);
+        }
+        
         // Send emergency alert
         await sendEmergencyAlert({ latitude, longitude });
         
-        // Show success notification with location
-        const locationText = `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        // Show success notification with location and landmark
+        const locationText = landmarkText;
         
         // Try to show notification with proper permission handling
         try {

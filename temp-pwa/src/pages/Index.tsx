@@ -10,7 +10,8 @@ import { useLiveLocation } from "@/hooks/useLocation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
-  // Use the live location hook
+  // Use the live location hook - updates every 5 minutes automatically
+  // Emergency buttons handle instant location updates on their own
   useLiveLocation();
 
   const features = [

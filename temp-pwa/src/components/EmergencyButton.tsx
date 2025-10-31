@@ -56,11 +56,27 @@ export const EmergencyButton = () => {
             {
               enableHighAccuracy: true,
               timeout: 10000,
-              maximumAge: 60000, // Accept positions up to 1 minute old
+              maximumAge: 0, // Always get fresh location for emergency alerts
             }
           );
         }
       );
+
+      // Fetch nearby landmarks
+      let landmarkText = `Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+      try {
+        const { GeocodingService } = await import("@/services/geocodingService");
+        const landmark = await GeocodingService.getNearbyLandmarks(
+          location.latitude,
+          location.longitude
+        );
+        if (landmark.fullAddress || landmark.displayName) {
+          landmarkText = GeocodingService.formatLandmarkForAlert(landmark);
+          console.log("🏛️ Emergency alert landmark:", landmarkText);
+        }
+      } catch (error) {
+        console.warn("Could not fetch landmark for emergency, using coordinates:", error);
+      }
 
       // Send alert to backend
       await sendEmergencyAlert({
@@ -68,8 +84,8 @@ export const EmergencyButton = () => {
         longitude: location.longitude
       });
 
-      // Show success notification with location
-      const locationText = `Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+      // Show success notification with location and landmark
+      const locationText = landmarkText;
       
       // Try to show notification with proper permission handling
       try {

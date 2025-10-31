@@ -5,11 +5,21 @@ import "./index.css";
 // ✅ Ask for location permission when app starts
 if ("geolocation" in navigator) {
   navigator.geolocation.getCurrentPosition(
-    (pos) => {
+    async (pos) => {
       const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = pos.coords;
       console.log("Initial location:", latitude, longitude);
       
-      // Send initial location to backend
+      // Fetch nearby landmarks for initial location
+      let landmark = null;
+      try {
+        const { GeocodingService } = await import("./services/geocodingService");
+        landmark = await GeocodingService.getNearbyLandmarks(latitude, longitude);
+        console.log("🏛️ Initial location landmark:", landmark.displayName || landmark.fullAddress);
+      } catch (error) {
+        console.warn("Could not fetch landmark for initial location:", error);
+      }
+      
+      // Send initial location to backend with landmark data
       fetch("http://localhost:5000/api/location", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -20,7 +30,8 @@ if ("geolocation" in navigator) {
           altitude: altitude || null,
           altitudeAccuracy: altitudeAccuracy || null,
           heading: heading || null,
-          speed: speed || null
+          speed: speed || null,
+          landmark: landmark || undefined
         }),
       }).catch(err => console.error("Failed to send initial location:", err));
     },
